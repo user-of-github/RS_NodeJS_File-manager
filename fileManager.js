@@ -9,7 +9,7 @@ class FileManager {
 
   constructor() {
     this.#currentDirectory = os.homedir();
-    console.info(`Initial directory: ${this.#currentDirectory}`);
+    console.info(`Current directory: ${this.#currentDirectory}`);
   }
 
   async run() {
@@ -20,6 +20,7 @@ class FileManager {
 
 
     while (true) {
+      console.info(`Current directory: ${this.#currentDirectory}`);
       const input = await read.question('');
       const splittedInput = input.split(' ');
       const command = splittedInput.at(0);
@@ -83,8 +84,8 @@ class FileManager {
       absolutePath = path.resolve(this.#currentDirectory, enteredPath);
     }
 
-    const doesPathExist = FileManager.#doesPathExist(absolutePath);
-    const isFolder = FileManager.#isDirectory(absolutePath);
+    const doesPathExist = await FileManager.#doesPathExist(absolutePath);
+    const isFolder = await FileManager.#isDirectory(absolutePath);
 
     if (!isFolder) {
       console.error('Can\'t move into non-directory');
@@ -99,8 +100,8 @@ class FileManager {
   }
 
   async #ls() {
-    const list = new Promise(resolve => {
-      fs.readdir(this.#currentDirectory, resolve);
+    const list = await new Promise(resolve => {
+      fs.readdir(this.#currentDirectory, (error, files) => resolve(files));
     });
 
     const directories = await Promise.all(list.map(entity => {
@@ -112,10 +113,10 @@ class FileManager {
 
   static async #isDirectory(absolutePath) {
     const stats = await new Promise(resolve => {
-      fs.lstat(absolutePath, (error, stats) => resolve(error))
+      fs.lstat(absolutePath, (error, stats) => resolve(stats))
     });
 
-    return stats.isDirectory();
+    return stats?.isDirectory?.();
   }
 
   static async #doesPathExist(absolutePath) {
