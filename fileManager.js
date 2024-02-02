@@ -2,6 +2,10 @@ import os from 'os';
 import readline from 'readline';
 import path from 'path';
 import fs from 'fs';
+import {StatsService} from './StatsService.js';
+import {StreamsService} from './StreamsService.js';
+import {PathService} from './PathService.js';
+import {CompressService} from './CompressService.js';
 
 
 class FileManager {
@@ -69,6 +73,11 @@ class FileManager {
           this.#os(argument);
           break;
         }
+        case 'hash': {
+          const filePath = PathService.extractFilePathFromString(splittedInput.slice(1));
+          await this.#hashFile(filePath);
+          break;
+        }
         case 'compress': {
           break;
         }
@@ -84,20 +93,13 @@ class FileManager {
   }
 
   #up() {
-    this.#currentDirectory = path.resolve(this.#currentDirectory, '../');
+    this.#currentDirectory = PathService.toAbsolute(this.#currentDirectory, '../');
   }
 
   async #cd(enteredPath) {
-    let absolutePath;
-
-    if (path.isAbsolute(enteredPath)) {
-      absolutePath = enteredPath;
-    } else {
-      absolutePath = path.resolve(this.#currentDirectory, enteredPath);
-    }
-
-    const doesPathExist = await FileManager.#doesPathExist(absolutePath);
-    const isFolder = await FileManager.#isDirectory(absolutePath);
+    const absolutePath = PathService.toAbsolute(this.#currentDirectory, enteredPath);
+    const doesPathExist = await StatsService.doesPathExist(absolutePath);
+    const isFolder = (await StatsService.stats(absolutePath)).isDirectory();
 
     if (!isFolder) {
       console.error('Can\'t move into non-directory');
@@ -116,53 +118,32 @@ class FileManager {
       fs.readdir(this.#currentDirectory, (error, files) => resolve(files));
     });
 
-    const directoriesFlags = await Promise.all(list.map(entity => {
-      const fullPath = path.resolve(this.#currentDirectory, entity);
-      return new Promise(resolve => {
-        FileManager.#isDirectory(fullPath).then(resolve);
-      });
-    }));
+    const table = await Promise.all(list.map(async entity => {
+      const fullPath = PathService.toAbsolute(this.#currentDirectory, entity);
+      const stats = await StatsService.stats(fullPath);
 
-    const files = [];
-    const directories = [];
-
-    for (let index = 0; index < list.length; ++index) {
-      if (directoriesFlags[index]) {
-        directories.push(list[index]);
+      if (stats.isDirectory()) {
+        return [entity, 'directory'];
+      } else if (stats.isFile()) {
+        return [entity, 'file'];
       } else {
-        files.push(list[index]);
+        return [entity, 'other'];
       }
-    }
-
-    const table = [];
-    directories.forEach(directory => table.push([directory, 'directory']));
-    files.forEach(file => table.push([file, 'file']));
+    }));
 
     console.table(table);
   }
 
   async #cat(filePath) {
-    const absolutePath = path.resolve(this.#currentDirectory, filePath);
-
-    const data = await new Promise(resolve => {
-      let response = '';
-      const readStream = fs.createReadStream(absolutePath, { encoding: 'utf-8' });
-      readStream.on('data', chunk => {
-        response += chunk;
-      });
-
-      readStream.on('close', () => {
-        resolve(response);
-      });
-    });
-
+    const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
+    const data = StreamsService.readFile(absolutePath);
     console.log(data);
   }
 
   async #add(filename) {
-    const absolutePath = path.resolve(this.#currentDirectory, filename);
+    const absolutePath = PathService.toAbsolute(this.#currentDirectory, filename);
 
-    const doesAlreadyExist = await new Promise(resolve => fs.exists(absolutePath, resolve));
+    const doesAlreadyExist = await StatsService.doesPathExist(absolutePath);
     if (doesAlreadyExist) {
       console.warn('File with such name already exists. Aborting');
       return;
@@ -187,8 +168,7 @@ class FileManager {
     const parsed = enteredInputSource.trim().split(' ');
     const filenameInQuotesRegex = /"([^"])"/g;
     const [source, destination] = [parsed[0], parsed[1]];
-    const [sourceAbsolute, destinationAbsolute] = [path.resolve(this.#currentDirectory, source), path.resolve(this.#currentDirectory, destination)];
-
+    const [sourceAbsolute, destinationAbsolute] = [PathService.toAbsolute(this.#currentDirectory, source), PathService.toAbsolute(this.#currentDirectory, destination)];
 
     await new Promise(resolve => {
       fs.rename(sourceAbsolute, destinationAbsolute, error => {
@@ -226,18 +206,11 @@ class FileManager {
     }
   }
 
-  static async #isDirectory(absolutePath) {
-    const stats = await new Promise(resolve => {
-      fs.lstat(absolutePath, (error, stats) => resolve(stats))
-    });
-
-    return stats?.isDirectory?.();
-  }
-
-  static async #doesPathExist(absolutePath) {
-    return await new Promise(resolve => {
-      fs.exists(absolutePath, resolve);
-    });
+  async #hashFile(filePath) {
+    const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
+    const fileData = await StreamsService.readFile(absolutePath);
+    const hashedValue = CompressService.hash(fileData);
+    console.log(hashedValue);
   }
 }
 
