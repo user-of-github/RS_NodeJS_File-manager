@@ -50,6 +50,8 @@ class FileManager {
           break;
         }
         case 'rn': {
+          const input = splittedInput.slice(1).join(' ');
+          await this.#rn(input);
           break;
         }
         case 'cp': {
@@ -173,6 +175,24 @@ class FileManager {
         fs.close(descriptor, () => {
           resolve();
         });
+      });
+    });
+  }
+
+  async #rn(enteredInputSource) {
+    // TODO: what to do with filenames with space ?
+    const parsed = enteredInputSource.trim().split(' ');
+    const filenameInQuotesRegex = /"([^"])"/g;
+    const [source, destination] = [parsed[0], parsed[1]];
+    const [sourceAbsolute, destinationAbsolute] = [path.resolve(this.#currentDirectory, source), path.resolve(this.#currentDirectory, destination)];
+
+
+    await new Promise(resolve => {
+      fs.rename(sourceAbsolute, destinationAbsolute, error => {
+        if (error) {
+          console.log(error);
+        }
+        resolve();
       });
     });
   }
