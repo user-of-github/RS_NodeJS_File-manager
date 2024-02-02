@@ -44,6 +44,11 @@ class FileManager {
           await this.#cat(enteredPath);
           break;
         }
+        case 'add': {
+          const enteredFilename = splittedInput.slice(1).join(' ');
+          await this.#add(enteredFilename);
+          break;
+        }
         case 'rn': {
           break;
         }
@@ -147,6 +152,29 @@ class FileManager {
     });
 
     console.log(data);
+  }
+
+  async #add(filename) {
+    const absolutePath = path.resolve(this.#currentDirectory, filename);
+
+    const doesAlreadyExist = await new Promise(resolve => fs.exists(absolutePath, resolve));
+    if (doesAlreadyExist) {
+      console.warn('File with such name already exists. Aborting');
+      return;
+    }
+
+    await new Promise(resolve => {
+      fs.open(absolutePath, 'w', (err, descriptor) => {
+        if (err) {
+          console.log(err.message);
+          resolve();
+        }
+
+        fs.close(descriptor, () => {
+          resolve();
+        });
+      });
+    });
   }
 
   static async #isDirectory(absolutePath) {
