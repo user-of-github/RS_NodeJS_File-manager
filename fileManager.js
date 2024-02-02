@@ -40,6 +40,8 @@ class FileManager {
           break;
         }
         case 'cat': {
+          const enteredPath = splittedInput.slice(1).join(' ');
+          await this.#cat(enteredPath);
           break;
         }
         case 'rn': {
@@ -127,6 +129,24 @@ class FileManager {
     files.forEach(file => table.push([file, 'file']));
 
     console.table(table);
+  }
+
+  async #cat(filePath) {
+    const absolutePath = path.resolve(this.#currentDirectory, filePath);
+
+    const data = await new Promise(resolve => {
+      let response = '';
+      const readStream = fs.createReadStream(absolutePath, { encoding: 'utf-8' });
+      readStream.on('data', chunk => {
+        response += chunk;
+      });
+
+      readStream.on('close', () => {
+        resolve(response);
+      });
+    });
+
+    console.log(data);
   }
 
   static async #isDirectory(absolutePath) {
