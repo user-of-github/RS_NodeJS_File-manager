@@ -31,7 +31,7 @@ class FileManager {
           break;
         }
         case 'cd': {
-          const enteredPath = splittedInput.at(1);
+          const enteredPath = splittedInput.slice(1).join(' ');
           await this.#cd(enteredPath);
           break;
         }
@@ -104,11 +104,29 @@ class FileManager {
       fs.readdir(this.#currentDirectory, (error, files) => resolve(files));
     });
 
-    const directories = await Promise.all(list.map(entity => {
+    const directoriesFlags = await Promise.all(list.map(entity => {
+      const fullPath = path.resolve(this.#currentDirectory, entity);
       return new Promise(resolve => {
-        FileManager.#isDirectory(entity).then(resolve);
+        FileManager.#isDirectory(fullPath).then(resolve);
       });
     }));
+
+    const files = [];
+    const directories = [];
+
+    for (let index = 0; index < list.length; ++index) {
+      if (directoriesFlags[index]) {
+        directories.push(list[index]);
+      } else {
+        files.push(list[index]);
+      }
+    }
+
+    const table = [];
+    directories.forEach(directory => table.push([directory, 'directory']));
+    files.forEach(file => table.push([file, 'file']));
+
+    console.table(table);
   }
 
   static async #isDirectory(absolutePath) {
