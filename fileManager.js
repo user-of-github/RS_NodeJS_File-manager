@@ -50,11 +50,12 @@ class FileManager {
           break;
         }
         case 'rn': {
-          const input = splittedInput.slice(1).join(' ');
-          await this.#rn(input);
+          //const input = splittedInput.slice(1).join(' ');
+          //await this.#rn(input);
           break;
         }
         case 'cp': {
+
           break;
         }
         case 'mv': {
@@ -64,6 +65,8 @@ class FileManager {
           break;
         }
         case 'os': {
+          const argument = splittedInput.at(1);
+          this.#os(argument);
           break;
         }
         case 'compress': {
@@ -195,6 +198,32 @@ class FileManager {
         resolve();
       });
     });
+  }
+
+  #os(argument) {
+    switch (argument) {
+      case '--EOL': {
+        console.log(os.EOL);
+        break;
+      }
+      case '--cpus': {
+        const table = os.cpus().map(cpu => [cpu.model, cpu.speed]);
+        console.log(`CPUs count: ${table.length}`);
+        console.table(table);
+        break;
+      }
+      case '--homedir': {
+        console.log(os.homedir());
+        break;
+      }
+      case '--username': {
+        console.log(os.userInfo().username);
+        break;
+      }
+      case '--architecture': {
+        console.log(os.arch())
+      }
+    }
   }
 
   static async #isDirectory(absolutePath) {
