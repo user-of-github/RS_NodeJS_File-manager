@@ -1,7 +1,7 @@
 {
   "name": "file-manager",
   "version": "1.0.0",
-  "description": "File manager for Rolling Scopes",
+  "description": "File manager for Rolling Scopes Node.js 2024Q1",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,9 @@
     "test:path-service": "node ./PathService.test.js"
   },
   "keywords": [],
-  "author": "Slutski Mikita (@user-of-github)",
+  "author": {
+    "name": "Slutski Mikita",
+    "url": "https://github.com/user-of-github"
+  },
   "license": "ISC"
 }
