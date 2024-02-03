@@ -9,6 +9,7 @@ import {CompressService} from './services/CompressService.js';
 
 class FileManager {
   static #invalidSinglePathMessage = 'Invalid path argument';
+  static #unknownAttributeMessage = 'Unknown attribute';
   static #invalid2PathsMessage = 'Invalid paths argument. 2 paths must be provided. If file-path contains spaces, it must be wrapped with "quoues"';
 
   #currentDirectory;
@@ -80,13 +81,24 @@ class FileManager {
           break;
         }
         case 'cp': {
-
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#cp(...enteredFilename.paths);
           break;
         }
         case 'mv': {
           break;
         }
         case 'rm': {
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#rm(enteredFilename.paths[0]);
           break;
         }
         case 'os': {
@@ -164,7 +176,7 @@ class FileManager {
   async #cat(filePath) {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
     const data = StreamsService.readFile(absolutePath);
-    console.log(data);
+    console.info(data);
   }
 
   async #add(filename) {
@@ -179,7 +191,7 @@ class FileManager {
     await new Promise(resolve => {
       fs.open(absolutePath, 'w', (err, descriptor) => {
         if (err) {
-          console.log(err.message);
+          console.info(err.message);
           resolve();
         }
 
@@ -206,26 +218,69 @@ class FileManager {
   #os(argument) {
     switch (argument) {
       case '--EOL': {
-        console.log(os.EOL);
+        console.info(os.EOL);
         break;
       }
       case '--cpus': {
         const table = os.cpus().map(cpu => [cpu.model, cpu.speed]);
-        console.log(`CPUs count: ${table.length}`);
+        console.info(`CPUs count: ${table.length}`);
         console.table(table);
         break;
       }
       case '--homedir': {
-        console.log(os.homedir());
+        console.info(os.homedir());
         break;
       }
       case '--username': {
-        console.log(os.userInfo().username);
+        console.info(os.userInfo().username);
         break;
       }
       case '--architecture': {
-        console.log(os.arch())
+        console.info(os.arch());
+        break;
       }
+      default: {
+        console.info(FileManager.#unknownAttributeMessage);
+        break;
+      }
+    }
+  }
+
+  async #cp(source, destination) {
+    const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
+    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+
+    return await new Promise(resolve => {
+      fs.cp(absoluteSource, absoluteDestination, {recursive: true}, error => {
+        if (error) {
+          console.warn(error);
+          resolve(false);
+        }
+
+        resolve(true);
+      });
+    });
+  }
+
+  async #rm(path) {
+    await new Promise(resolve => {
+      fs.rm(path, error => {
+        if (error) {
+          console.warn(error);
+        }
+
+        resolve();
+      });
+    });
+  }
+
+  async mv(source, destination) {
+    const isCopySuccessful = await this.#cp(source, destination);
+
+    if (isCopySuccessful) {
+      await this.#rm(source);
+    } else {
+      console.warn('Failed to execute mv command');
     }
   }
 
@@ -233,7 +288,7 @@ class FileManager {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
     const fileData = await StreamsService.readFile(absolutePath);
     const hashedValue = CompressService.hash(fileData);
-    console.log(hashedValue);
+    console.info(hashedValue);
   }
 }
 

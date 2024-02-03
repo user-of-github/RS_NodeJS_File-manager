@@ -4,10 +4,10 @@ const main = async () => {
   // TODO
   const username = process.argv[2];
 
-  console.log(`Welcome to the File Manager, ${username}!`);
+  console.info(`Welcome to the File Manager, ${username}!`);
 
   process.addListener('exit', () => {
-    console.log(`Thank you for using File Manager, ${username}, goodbye!`);
+    console.info(`Thank you for using File Manager, ${username}, goodbye!`);
   });
 
   await FileManager.run();
