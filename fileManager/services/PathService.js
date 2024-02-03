@@ -4,6 +4,7 @@ export class PathService {
   static isAbsolute(checkPath) {
     return path.isAbsolute(checkPath);
   }
+
   static toAbsolute(dirname, relative) {
     if (PathService.isAbsolute(relative)) {
       return relative;

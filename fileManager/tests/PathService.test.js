@@ -7,7 +7,6 @@ import {PathService} from '../services/PathService.js';
  So quotes in required as wrapper for path/filename only if >= 2 entities are expected as arguments.
  So acceptable combinations for entering paths:  cp "folder 1" "folder 2", cp folder-no-space "folder 2", cp "folder space" folder-no-space, cp folder-no-space1 no-space2
  */
-
 const testCases = [
   [['"path-in-quotes"  path-without-quotes', 2], {parseStatusSuccess: true, paths: ['path-in-quotes', 'path-without-quotes']}],
   [['"./long path with space/path-in-quotes.txt"  path-without-quotes', 2], {parseStatusSuccess: true, paths: ['./long path with space/path-in-quotes.txt', 'path-without-quotes']}],

@@ -1,6 +1,6 @@
 {
   "name": "file-manager",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "File manager for Rolling Scopes Node.js 2024Q1",
   "type": "module",
   "main": "index.js",

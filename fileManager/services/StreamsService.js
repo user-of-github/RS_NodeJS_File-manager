@@ -15,10 +15,6 @@ export class StreamsService {
     });
   }
 
-  static async pipeFileToFile(input, output, pipeFunction) {
-
-  }
-
   static getReadStream(source, options = {}) {
     return fs.createReadStream(source, options);
   }

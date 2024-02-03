@@ -4,7 +4,7 @@ import zlib from 'zlib';
 
 export class CompressService {
   static hash(data) {
-    return crypto.createHash('md5').update(name).digest('hex');
+    return crypto.createHash('md5').update(data).digest('hex');
   }
 
   static async compressWithBrotli(sourceStream, destinationStream) {
