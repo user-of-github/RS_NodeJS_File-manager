@@ -1,11 +1,10 @@
 import os from 'os';
 import readline from 'readline';
-import path from 'path';
 import fs from 'fs';
-import {StatsService} from './StatsService.js';
-import {StreamsService} from './StreamsService.js';
-import {PathService} from './PathService.js';
-import {CompressService} from './CompressService.js';
+import {StatsService} from './services/StatsService.js';
+import {StreamsService} from './services/StreamsService.js';
+import {PathService} from './services/PathService.js';
+import {CompressService} from './services/CompressService.js';
 
 
 class FileManager {
@@ -22,12 +21,13 @@ class FileManager {
       output: process.stdout
     });
 
-
     while (true) {
       console.info(`Current directory: ${this.#currentDirectory}`);
+
       const input = await read.question('');
       const splittedInput = input.split(' ');
       const command = splittedInput.at(0);
+      const restPartOfInput = splittedInput.slice(1).join(' ');
 
       switch (command) {
         case 'up': {
@@ -35,8 +35,12 @@ class FileManager {
           break;
         }
         case 'cd': {
-          const enteredPath = splittedInput.slice(1).join(' ');
-          await this.#cd(enteredPath);
+          const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredPath.parseStatusSuccess) {
+            console.warn('Invalid path argument');
+            break;
+          }
+          await this.#cd(enteredPath.paths[0]);
           break;
         }
         case 'ls': {
@@ -88,6 +92,10 @@ class FileManager {
           read.close();
           return;
         }
+        default: {
+          console.warn('Unknown command');
+          break;
+        }
       }
     }
   }
@@ -99,18 +107,20 @@ class FileManager {
   async #cd(enteredPath) {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, enteredPath);
     const doesPathExist = await StatsService.doesPathExist(absolutePath);
-    const isFolder = (await StatsService.stats(absolutePath)).isDirectory();
 
-    if (!isFolder) {
-      console.error('Can\'t move into non-directory');
+    if (!doesPathExist) {
+      console.warn('Path does not exist');
       return;
     }
 
-    if (doesPathExist) {
-      this.#currentDirectory = absolutePath;
-    } else {
-      console.error('Path does not exist')
+    const isFolder = (await StatsService.stats(absolutePath)).isDirectory();
+
+    if (!isFolder) {
+      console.warn('Can\'t move into non-directory');
+      return;
     }
+
+    this.#currentDirectory = absolutePath;
   }
 
   async #ls() {

@@ -1,4 +1,4 @@
-import {PathService} from './PathService.js';
+import {PathService} from '../services/PathService.js';
 
 /**
  PathService::extractFilePathFromString() receives a string and expected number of paths inside it

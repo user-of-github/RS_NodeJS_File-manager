@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./index.js",
-    "test:path-service": "node ./PathService.test.js"
+    "test:path-service": "node fileManager/tests/PathService.test.js"
   },
   "keywords": [],
   "author": {

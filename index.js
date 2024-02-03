@@ -1,4 +1,4 @@
-import FileManager from './fileManager.js';
+import FileManager from './fileManager/FileManager.js';
 
 const main = async () => {
   // TODO
