@@ -8,6 +8,9 @@ import {CompressService} from './services/CompressService.js';
 
 
 class FileManager {
+  static #invalidSinglePathMessage = 'Invalid path argument';
+  static #invalid2PathsMessage = 'Invalid paths argument. 2 paths must be provided. If file-path contains spaces, it must be wrapped with "quoues"';
+
   #currentDirectory;
 
   constructor() {
@@ -37,9 +40,10 @@ class FileManager {
         case 'cd': {
           const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredPath.parseStatusSuccess) {
-            console.warn('Invalid path argument');
+            console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
+
           await this.#cd(enteredPath.paths[0]);
           break;
         }
@@ -48,18 +52,31 @@ class FileManager {
           break;
         }
         case 'cat': {
-          const enteredPath = splittedInput.slice(1).join(' ');
-          await this.#cat(enteredPath);
+          const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredPath.parseStatusSuccess) {
+            console.warn(FileManager.#invalidSinglePathMessage);
+            break;
+          }
+
+          await this.#cat(enteredPath.paths[0]);
           break;
         }
         case 'add': {
-          const enteredFilename = splittedInput.slice(1).join(' ');
-          await this.#add(enteredFilename);
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalidSinglePathMessage);
+            break;
+          }
+          await this.#add(enteredFilename.paths[0]);
           break;
         }
         case 'rn': {
-          //const input = splittedInput.slice(1).join(' ');
-          //await this.#rn(input);
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#rn(...enteredFilename.paths);
           break;
         }
         case 'cp': {
@@ -173,11 +190,7 @@ class FileManager {
     });
   }
 
-  async #rn(enteredInputSource) {
-    // TODO: what to do with filenames with space ?
-    const parsed = enteredInputSource.trim().split(' ');
-    const filenameInQuotesRegex = /"([^"])"/g;
-    const [source, destination] = [parsed[0], parsed[1]];
+  async #rn(source, destination) {
     const [sourceAbsolute, destinationAbsolute] = [PathService.toAbsolute(this.#currentDirectory, source), PathService.toAbsolute(this.#currentDirectory, destination)];
 
     await new Promise(resolve => {

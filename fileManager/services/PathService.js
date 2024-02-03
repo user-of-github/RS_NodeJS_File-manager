@@ -20,15 +20,21 @@ export class PathService {
    So acceptable combinations for entering paths:  cp "folder 1" "folder 2", cp folder-no-space "folder 2", cp "folder space" folder-no-space, cp folder-no-space1 no-space2
    */
   static extractFilePathFromString(wholeStringFromInputSource, expectedPathsCount) {
+    const invalidPathResponse = {parseStatusSuccess: false, paths: []};
     const longPathsDelimiter = '"';
     const basePathsDelimiter = ' ';
 
     const wholeStringFromInput = wholeStringFromInputSource.trim();
+    const quotesCount = wholeStringFromInput.split('').filter(symbol => symbol === longPathsDelimiter).length;
+    if (quotesCount % 2 !== 0) { // every filename must be wrapped from both sides ==> number of quotes is even
+      return invalidPathResponse;
+    }
+
     const splittedByQuotes = PathService.#splitPathsByDelimiter(wholeStringFromInput, longPathsDelimiter);
 
     if (expectedPathsCount === 1) {
       if (splittedByQuotes.length !== 1) {
-        return {parseStatusSuccess: false, paths: []};
+        return invalidPathResponse;
       }
 
       return {parseStatusSuccess: true, paths: splittedByQuotes};
@@ -38,7 +44,7 @@ export class PathService {
       // No long paths detected, for example: cp ./file1 ./file2  ==> split by space
       const paths = PathService.#splitPathsByDelimiter(wholeStringFromInput, basePathsDelimiter);
       if (paths.length !== expectedPathsCount) {
-        return {parseStatusSuccess: false, paths: []};
+        return invalidPathResponse;
       }
 
       return { parseStatusSuccess: true, paths};
@@ -46,7 +52,7 @@ export class PathService {
 
     // one or all paths are in quotes, for example: cp "./file.txt" file2.txt
     if (splittedByQuotes.length !== expectedPathsCount) {
-      return {parseStatusSuccess: false, paths: []};
+      return invalidPathResponse;
     }
 
     return {parseStatusSuccess: true, paths: splittedByQuotes}
