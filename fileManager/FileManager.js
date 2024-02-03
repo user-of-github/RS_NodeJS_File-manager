@@ -21,8 +21,7 @@ class FileManager {
 
   async run() {
     const read = readline.promises.createInterface({
-      input: process.stdin,
-      output: process.stdout
+      input: process.stdin, output: process.stdout
     });
 
     while (true) {
@@ -90,6 +89,12 @@ class FileManager {
           break;
         }
         case 'mv': {
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#mv(...enteredFilename.paths);
           break;
         }
         case 'rm': {
@@ -112,9 +117,21 @@ class FileManager {
           break;
         }
         case 'compress': {
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#compress(...enteredFilename.paths);
           break;
         }
         case 'decompress': {
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalid2PathsMessage);
+            break;
+          }
+          await this.#decompress(...enteredFilename.paths);
           break;
         }
         case '.exit': {
@@ -215,6 +232,44 @@ class FileManager {
     });
   }
 
+  async #cp(source, destination) {
+    const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
+    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+
+    return await new Promise(resolve => {
+      fs.cp(absoluteSource, absoluteDestination, {recursive: true}, error => {
+        if (error) {
+          console.warn(error);
+          resolve(false);
+        }
+
+        resolve(true);
+      });
+    });
+  }
+
+  async #rm(path) {
+    await new Promise(resolve => {
+      fs.rm(path, error => {
+        if (error) {
+          console.warn(error);
+        }
+
+        resolve();
+      });
+    });
+  }
+
+  async #mv(source, destination) {
+    const isCopySuccessful = await this.#cp(source, destination);
+
+    if (isCopySuccessful) {
+      await this.#rm(source);
+    } else {
+      console.warn('Failed to execute mv command');
+    }
+  }
+
   #os(argument) {
     switch (argument) {
       case '--EOL': {
@@ -246,49 +301,31 @@ class FileManager {
     }
   }
 
-  async #cp(source, destination) {
-    const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
-    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
-
-    return await new Promise(resolve => {
-      fs.cp(absoluteSource, absoluteDestination, {recursive: true}, error => {
-        if (error) {
-          console.warn(error);
-          resolve(false);
-        }
-
-        resolve(true);
-      });
-    });
-  }
-
-  async #rm(path) {
-    await new Promise(resolve => {
-      fs.rm(path, error => {
-        if (error) {
-          console.warn(error);
-        }
-
-        resolve();
-      });
-    });
-  }
-
-  async mv(source, destination) {
-    const isCopySuccessful = await this.#cp(source, destination);
-
-    if (isCopySuccessful) {
-      await this.#rm(source);
-    } else {
-      console.warn('Failed to execute mv command');
-    }
-  }
-
   async #hashFile(filePath) {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
     const fileData = await StreamsService.readFile(absolutePath);
     const hashedValue = CompressService.hash(fileData);
     console.info(hashedValue);
+  }
+
+  async #compress(source, destination) {
+    const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
+    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+
+    const sourceStream = StreamsService.getReadStream(absoluteSource);
+    const destinationStream = StreamsService.getWriteStream(absoluteDestination);
+
+    await CompressService.compressWithBrotli(sourceStream, destinationStream);
+  }
+
+  async #decompress(source, destination) {
+    const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
+    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+
+    const sourceStream = StreamsService.getReadStream(absoluteSource);
+    const destinationStream = StreamsService.getWriteStream(absoluteDestination);
+
+    await CompressService.decompressWithBrotli(sourceStream, destinationStream);
   }
 }
 

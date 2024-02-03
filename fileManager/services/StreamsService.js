@@ -18,4 +18,12 @@ export class StreamsService {
   static async pipeFileToFile(input, output, pipeFunction) {
 
   }
+
+  static getReadStream(source, options = {}) {
+    return fs.createReadStream(source, options);
+  }
+
+  static getWriteStream(destination, options = {}) {
+    return fs.createWriteStream(destination, options);
+  }
 }
