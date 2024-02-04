@@ -1,8 +1,7 @@
 import FileManager from './fileManager/FileManager.js';
 
 const main = async () => {
-  // TODO
-  const username = process.argv[2];
+  const username = process.argv[2].split('=').at(1);
 
   console.info(`Welcome to the File Manager, ${username}!`);
 

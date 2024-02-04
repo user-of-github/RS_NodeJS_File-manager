@@ -48,7 +48,7 @@ export class PathService {
         return invalidPathResponse;
       }
 
-      return { parseStatusSuccess: true, paths};
+      return {parseStatusSuccess: true, paths};
     }
 
     // one or all paths are in quotes, for example: cp "./file.txt" file2.txt
@@ -56,7 +56,7 @@ export class PathService {
       return invalidPathResponse;
     }
 
-    return {parseStatusSuccess: true, paths: splittedByQuotes}
+    return {parseStatusSuccess: true, paths: splittedByQuotes};
   }
 
   static #splitPathsByDelimiter(input, delimiter) {

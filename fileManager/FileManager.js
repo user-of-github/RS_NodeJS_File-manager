@@ -20,14 +20,14 @@ class FileManager {
   }
 
   async run() {
-    const read = readline.promises.createInterface({
+    const consoleInputReader = readline.promises.createInterface({
       input: process.stdin, output: process.stdout
     });
 
     while (true) {
       console.info(`Current directory: ${this.#currentDirectory}`);
 
-      const input = await read.question('');
+      const input = await consoleInputReader.question('');
       const splittedInput = input.split(' ');
       const command = splittedInput.at(0);
       const restPartOfInput = splittedInput.slice(1).join(' ');
@@ -37,6 +37,7 @@ class FileManager {
           this.#up();
           break;
         }
+
         case 'cd': {
           const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredPath.parseStatusSuccess) {
@@ -47,10 +48,12 @@ class FileManager {
           await this.#cd(enteredPath.paths[0]);
           break;
         }
+
         case 'ls': {
           await this.#ls();
           break;
         }
+
         case 'cat': {
           const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredPath.parseStatusSuccess) {
@@ -61,6 +64,7 @@ class FileManager {
           await this.#cat(enteredPath.paths[0]);
           break;
         }
+
         case 'add': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredFilename.parseStatusSuccess) {
@@ -70,6 +74,7 @@ class FileManager {
           await this.#add(enteredFilename.paths[0]);
           break;
         }
+
         case 'rn': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
           if (!enteredFilename.parseStatusSuccess) {
@@ -79,6 +84,7 @@ class FileManager {
           await this.#rn(...enteredFilename.paths);
           break;
         }
+
         case 'cp': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
           if (!enteredFilename.parseStatusSuccess) {
@@ -88,6 +94,7 @@ class FileManager {
           await this.#cp(...enteredFilename.paths);
           break;
         }
+
         case 'mv': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
           if (!enteredFilename.parseStatusSuccess) {
@@ -97,6 +104,7 @@ class FileManager {
           await this.#mv(...enteredFilename.paths);
           break;
         }
+
         case 'rm': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredFilename.parseStatusSuccess) {
@@ -106,25 +114,30 @@ class FileManager {
           await this.#rm(enteredFilename.paths[0]);
           break;
         }
+
         case 'os': {
           const argument = splittedInput.at(1);
           this.#os(argument);
           break;
         }
+
         case 'hash': {
           const filePath = PathService.extractFilePathFromString(splittedInput.slice(1));
           await this.#hashFile(filePath);
           break;
         }
+
         case 'compress': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredFilename.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
           }
+
           await this.#compress(...enteredFilename.paths);
           break;
         }
+
         case 'decompress': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredFilename.parseStatusSuccess) {
@@ -134,14 +147,17 @@ class FileManager {
           await this.#decompress(...enteredFilename.paths);
           break;
         }
+
         case '.exit': {
-          read.close();
+          consoleInputReader.close();
           return;
         }
+
         case '': {
           console.warn('Empty command');
           break;
         }
+
         default: {
           console.warn(`Unknown command "${command}"`);
           break;
@@ -182,20 +198,19 @@ class FileManager {
       const fullPath = PathService.toAbsolute(this.#currentDirectory, entity);
       const stats = await StatsService.stats(fullPath);
 
-     try {
-       if (stats.isDirectory()) {
-         return [entity, 'directory'];
-       } else if (stats.isFile()) {
-         return [entity, 'file'];
-       } else if (stats.isSymbolicLink()) {
-         return [entity, 'symbolic link'];
-       }
-       else {
-         return [entity, 'other'];
-       }
-     } catch (error) {
-       return [entity, 'unknown'];
-     }
+      try {
+        if (stats.isDirectory()) {
+          return [entity, 'directory'];
+        } else if (stats.isFile()) {
+          return [entity, 'file'];
+        } else if (stats.isSymbolicLink()) {
+          return [entity, 'symbolic link'];
+        } else {
+          return [entity, 'other'];
+        }
+      } catch (error) {
+        return [entity, 'unknown'];
+      }
     }));
 
     console.table(table);
