@@ -125,8 +125,13 @@ export class FileManager {
         }
 
         case 'hash': {
-          const filePath = PathService.extractFilePathFromString(splittedInput.slice(1));
-          await this.#hashFile(filePath);
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!enteredFilename.parseStatusSuccess) {
+            console.warn(FileManager.#invalidSinglePathMessage);
+            break;
+          }
+
+          await this.#hashFile(enteredFilename.paths.at(0));
           break;
         }
 
@@ -338,6 +343,10 @@ export class FileManager {
         console.info(os.arch());
         break;
       }
+      case undefined: {
+        console.info('os command requires an attribute');
+        break;
+      }
       default: {
         console.info(FileManager.#unknownAttributeMessage);
         break;
@@ -347,9 +356,14 @@ export class FileManager {
 
   async #hashFile(filePath) {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
-    const fileData = await StreamsService.readFile(absolutePath);
-    const hashedValue = CompressService.hash(fileData);
-    console.info(hashedValue);
+
+    try {
+      const fileData = await StreamsService.readFile(absolutePath);
+      const hashedValue = CompressService.hash(fileData);
+      console.info(hashedValue);
+    } catch {
+      console.warn('Provided path is not a file or not valid or unable to hash such contents');
+    }
   }
 
   async #compress(source, destination) {
