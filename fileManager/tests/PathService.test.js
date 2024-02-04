@@ -20,6 +20,7 @@ const testCases = [
   [['./long path with space/path-in-quotes.txt ./another-long-path/file with space.txt', 2], {parseStatusSuccess: false, paths: []}],
   [['./long path with space/path-in-quotes.txt ./another-long-path/file with space.txt', 1], {parseStatusSuccess: true, paths: ['./long path with space/path-in-quotes.txt ./another-long-path/file with space.txt']}],
   [['"folder 1" "./folder 2/file"', 2], {parseStatusSuccess: true, paths: ['folder 1', './folder 2/file']}],
+  [['file with long name/file.txt "./another folder 2/file"', 2], {parseStatusSuccess: true, paths: ['file with long name/file.txt', './another folder 2/file']}], // strange case, but actually it does not break anything :)
 ];
 
 const test = () => {

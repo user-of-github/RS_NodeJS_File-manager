@@ -10,7 +10,7 @@ import {CompressService} from './services/CompressService.js';
 class FileManager {
   static #invalidSinglePathMessage = 'Invalid path argument';
   static #unknownAttributeMessage = 'Unknown attribute';
-  static #invalid2PathsMessage = 'Invalid paths argument. 2 paths must be provided. If file-path contains spaces, it must be wrapped with "quoues"';
+  static #invalid2PathsMessage = 'Invalid paths argument. 2 paths must be provided. If file-path contains spaces, it should be wrapped with "quoues"';
 
   #currentDirectory;
 
@@ -138,8 +138,12 @@ class FileManager {
           read.close();
           return;
         }
+        case '': {
+          console.warn('Empty command');
+          break;
+        }
         default: {
-          console.warn('Unknown command');
+          console.warn(`Unknown command "${command}"`);
           break;
         }
       }
@@ -178,13 +182,20 @@ class FileManager {
       const fullPath = PathService.toAbsolute(this.#currentDirectory, entity);
       const stats = await StatsService.stats(fullPath);
 
-      if (stats.isDirectory()) {
-        return [entity, 'directory'];
-      } else if (stats.isFile()) {
-        return [entity, 'file'];
-      } else {
-        return [entity, 'other'];
-      }
+     try {
+       if (stats.isDirectory()) {
+         return [entity, 'directory'];
+       } else if (stats.isFile()) {
+         return [entity, 'file'];
+       } else if (stats.isSymbolicLink()) {
+         return [entity, 'symbolic link'];
+       }
+       else {
+         return [entity, 'other'];
+       }
+     } catch (error) {
+       return [entity, 'unknown'];
+     }
     }));
 
     console.table(table);
@@ -192,8 +203,12 @@ class FileManager {
 
   async #cat(filePath) {
     const absolutePath = PathService.toAbsolute(this.#currentDirectory, filePath);
-    const data = StreamsService.readFile(absolutePath);
-    console.info(data);
+    try {
+      const data = await StreamsService.readFile(absolutePath);
+      console.info(data);
+    } catch {
+      console.warn('Unable to read contents by passed path');
+    }
   }
 
   async #add(filename) {
@@ -225,7 +240,7 @@ class FileManager {
     await new Promise(resolve => {
       fs.rename(sourceAbsolute, destinationAbsolute, error => {
         if (error) {
-          console.log(error);
+          console.log(error.message);
         }
         resolve();
       });
@@ -239,7 +254,7 @@ class FileManager {
     return await new Promise(resolve => {
       fs.cp(absoluteSource, absoluteDestination, {recursive: true}, error => {
         if (error) {
-          console.warn(error);
+          console.warn(error.message);
           resolve(false);
         }
 
@@ -252,7 +267,7 @@ class FileManager {
     await new Promise(resolve => {
       fs.rm(path, error => {
         if (error) {
-          console.warn(error);
+          console.warn(error.message);
         }
 
         resolve();
