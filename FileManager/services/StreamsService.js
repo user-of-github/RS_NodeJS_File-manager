@@ -18,10 +18,22 @@ export class StreamsService {
   }
 
   static getReadStream(source, options = {}) {
-    return fs.createReadStream(source, options);
+    try {
+      return fs.createReadStream(source, options).on('error', error => {
+        throw error;
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 
   static getWriteStream(destination, options = {}) {
-    return fs.createWriteStream(destination, options);
+    try {
+      return fs.createWriteStream(destination, options).on('error', error => {
+        throw error;
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 }

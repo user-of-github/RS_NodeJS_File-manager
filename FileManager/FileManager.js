@@ -9,7 +9,6 @@ import {PathService} from './services/PathService.js';
 import {CompressService} from './services/CompressService.js';
 
 
-
 export class FileManager {
   static #invalidSinglePathMessage = 'Invalid path argument';
   static #unknownAttributeMessage = 'Unknown attribute';
@@ -41,13 +40,13 @@ export class FileManager {
         }
 
         case 'cd': {
-          const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredPath.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
 
-          await this.#cd(enteredPath.paths[0]);
+          await this.#cd(parsed.paths[0]);
           break;
         }
 
@@ -57,64 +56,64 @@ export class FileManager {
         }
 
         case 'cat': {
-          const enteredPath = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredPath.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
 
-          await this.#cat(enteredPath.paths[0]);
+          await this.#cat(parsed.paths[0]);
           break;
         }
 
         case 'add': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
-          await this.#add(enteredFilename.paths[0]);
+          await this.#add(parsed.paths[0]);
           break;
         }
 
         case 'rn': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
           }
-          await this.#rn(...enteredFilename.paths);
+          await this.#rn(...parsed.paths);
           break;
         }
 
         case 'cp': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
           }
-          await this.#cp(...enteredFilename.paths);
+          await this.#cp(...parsed.paths);
           break;
         }
 
         case 'mv': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
           }
-          await this.#mv(...enteredFilename.paths);
+          await this.#mv(...parsed.paths);
           break;
         }
 
         case 'rm': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
 
-          await this.#rm(enteredFilename.paths[0]);
+          await this.#rm(parsed.paths[0]);
           break;
         }
 
@@ -125,29 +124,29 @@ export class FileManager {
         }
 
         case 'hash': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 1);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
 
-          await this.#hashFile(enteredFilename.paths.at(0));
+          await this.#hashFile(parsed.paths.at(0));
           break;
         }
 
         case 'compress': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
-          if (!enteredFilename.parseStatusSuccess) {
+          const parsed = PathService.extractFilePathFromString(restPartOfInput, 2);
+          if (!parsed.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
           }
 
-          await this.#compress(...enteredFilename.paths);
+          await this.#compress(...parsed.paths);
           break;
         }
 
         case 'decompress': {
-          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
+          const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 2);
           if (!enteredFilename.parseStatusSuccess) {
             console.warn(FileManager.#invalid2PathsMessage);
             break;
@@ -368,21 +367,80 @@ export class FileManager {
 
   async #compress(source, destination) {
     const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
-    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+    const absoluteDestinationFolder = PathService.toAbsolute(this.#currentDirectory, destination);
 
-    const sourceStream = StreamsService.getReadStream(absoluteSource);
-    const destinationStream = StreamsService.getWriteStream(absoluteDestination);
+    const destinationFolderExists = await new Promise(resolve => fs.exists(absoluteDestinationFolder, resolve));
 
-    await CompressService.compressWithBrotli(sourceStream, destinationStream);
+    if (!destinationFolderExists) {
+      console.warn('Destination folder does not exist: ' + absoluteDestinationFolder);
+      return;
+    }
+
+    const absoluteDestination = path.resolve(
+      absoluteDestinationFolder,
+      PathService.getFullFilename(source) + CompressService.compressExtension
+    );
+
+    const destinationExists = await new Promise(resolve => fs.exists(absoluteDestination, resolve));
+
+    if (destinationExists) {
+      console.warn('Destination file already exists: ' + absoluteDestination);
+      return;
+    }
+
+    try {
+      await fs.promises.access(absoluteSource);
+
+      const sourceStream = StreamsService.getReadStream(absoluteSource);
+      const destinationStream = StreamsService.getWriteStream(absoluteDestination, {flags: 'wx+'});
+
+      await CompressService.compressWithBrotli(sourceStream, destinationStream);
+    } catch (error) {
+      console.warn('Unable to compress. Paths may be incorrect, or destination folder already contains compressed file with same name');
+      console.warn(error.message);
+    }
   }
 
   async #decompress(source, destination) {
     const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
-    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+    const absoluteDestinationFolder = PathService.toAbsolute(this.#currentDirectory, destination);
 
-    const sourceStream = StreamsService.getReadStream(absoluteSource);
-    const destinationStream = StreamsService.getWriteStream(absoluteDestination);
+    const destinationFolderExists = await new Promise(resolve => fs.exists(absoluteDestinationFolder, resolve));
 
-    await CompressService.decompressWithBrotli(sourceStream, destinationStream);
+    if (!destinationFolderExists) {
+      console.warn('Destination folder does not exist: ' + absoluteDestinationFolder);
+      return;
+    }
+
+    let absoluteDestination = path.resolve(
+      absoluteDestinationFolder,
+      PathService.getFullFilename(source)
+    );
+
+    if (absoluteDestination.endsWith(CompressService.compressExtension)) {
+      absoluteDestination = absoluteDestination.slice(0, -1 * CompressService.compressExtension.length);
+    } else {
+      console.warn(`Can not decompress files without ${CompressService.compressExtension} extension`);
+      return;
+    }
+
+    const destinationExists = await new Promise(resolve => fs.exists(absoluteDestination, resolve));
+
+    if (destinationExists) {
+      console.warn('Destination file already exists: ' + absoluteDestination);
+      return;
+    }
+
+    try {
+      await fs.promises.access(absoluteSource);
+
+      const sourceStream = StreamsService.getReadStream(absoluteSource);
+      const destinationStream = StreamsService.getWriteStream(absoluteDestination, {flags: 'wx+'});
+
+      await CompressService.decompressWithBrotli(sourceStream, destinationStream);
+    } catch (error) {
+      console.warn('Unable to decompress. Paths may be incorrect, or destination folder already contains compressed file with same name');
+      console.warn(error.message);
+    }
   }
 }
