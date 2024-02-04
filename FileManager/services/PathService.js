@@ -62,4 +62,8 @@ export class PathService {
   static #splitPathsByDelimiter(input, delimiter) {
     return input.split(delimiter).filter(path => path.trim() !== '').map(item => item.trim());
   }
+
+  static getFullFilename(filepath) {
+    return path.basename(filepath);
+  }
 }

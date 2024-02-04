@@ -1,13 +1,16 @@
 import os from 'os';
 import readline from 'readline';
+import path from 'path';
 import fs from 'fs';
+import stream from 'stream';
 import {StatsService} from './services/StatsService.js';
 import {StreamsService} from './services/StreamsService.js';
 import {PathService} from './services/PathService.js';
 import {CompressService} from './services/CompressService.js';
 
 
-class FileManager {
+
+export class FileManager {
   static #invalidSinglePathMessage = 'Invalid path argument';
   static #unknownAttributeMessage = 'Unknown attribute';
   static #invalid2PathsMessage = 'Invalid paths argument. 2 paths must be provided. If file-path contains spaces, it should be wrapped with "quoues"';
@@ -16,7 +19,6 @@ class FileManager {
 
   constructor() {
     this.#currentDirectory = os.homedir();
-    console.info(`Current directory: ${this.#currentDirectory}`);
   }
 
   async run() {
@@ -108,9 +110,10 @@ class FileManager {
         case 'rm': {
           const enteredFilename = PathService.extractFilePathFromString(restPartOfInput, 1);
           if (!enteredFilename.parseStatusSuccess) {
-            console.warn(FileManager.#invalid2PathsMessage);
+            console.warn(FileManager.#invalidSinglePathMessage);
             break;
           }
+
           await this.#rm(enteredFilename.paths[0]);
           break;
         }
@@ -264,23 +267,34 @@ class FileManager {
 
   async #cp(source, destination) {
     const absoluteSource = PathService.toAbsolute(this.#currentDirectory, source);
-    const absoluteDestination = PathService.toAbsolute(this.#currentDirectory, destination);
+    const copiedFileName = PathService.getFullFilename(absoluteSource);
+    const absoluteDestination = path.resolve(PathService.toAbsolute(this.#currentDirectory, destination), copiedFileName);
 
-    return await new Promise(resolve => {
-      fs.cp(absoluteSource, absoluteDestination, {recursive: true}, error => {
-        if (error) {
-          console.warn(error.message);
-          resolve(false);
-        }
+    const isSourceAFile = (await StatsService.stats(absoluteSource))?.isFile();
 
-        resolve(true);
-      });
-    });
+    if (!isSourceAFile) {
+      console.warn('cp command works only with file types and existing source-paths');
+      return false;
+    }
+
+    try {
+      const sourceStream = StreamsService.getReadStream(absoluteSource);
+      const destinationStream = StreamsService.getWriteStream(absoluteDestination, {flags: 'wx+'});
+
+      await stream.promises.pipeline(sourceStream, destinationStream);
+    } catch {
+      console.warn('Unable to copy. Some error occurred. Maybe some path is invalid or target file already exists in destination folder');
+      return false;
+    }
+
+    return true;
   }
 
   async #rm(path) {
+    const absolutePath = PathService.toAbsolute(this.#currentDirectory, path);
+
     await new Promise(resolve => {
-      fs.rm(path, error => {
+      fs.rm(absolutePath, error => {
         if (error) {
           console.warn(error.message);
         }
@@ -358,5 +372,3 @@ class FileManager {
     await CompressService.decompressWithBrotli(sourceStream, destinationStream);
   }
 }
-
-export default new FileManager();
