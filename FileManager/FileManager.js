@@ -7,6 +7,7 @@ import {StatsService} from './services/StatsService.js';
 import {StreamsService} from './services/StreamsService.js';
 import {PathService} from './services/PathService.js';
 import {CompressService} from './services/CompressService.js';
+import {Converter} from './services/Converter.js';
 
 
 export class FileManager {
@@ -325,7 +326,9 @@ export class FileManager {
         break;
       }
       case '--cpus': {
-        const table = os.cpus().map(cpu => [cpu.model, cpu.speed]);
+        const table = os.cpus().map(cpu => {
+          return [cpu.model, `${Converter.MHzToGHz(cpu.speed)} GHz`];
+        });
         console.info(`CPUs count: ${table.length}`);
         console.table(table);
         break;
